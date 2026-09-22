@@ -63,8 +63,21 @@ public class ProductService {
     //   - Đừng tạo Product mới — phải update đúng record cũ để không bị tạo id khác
     // ==========================================================
     public ProductResponse updateProduct(String id, ProductRequest productRequest) {
-        // TODO: viết code tại đây
-        return null;
+        Optional<Product> opt = productRepository.findById(id);
+        if (opt.isEmpty()) {
+            throw new ProductNotFoundException(id);
+        }
+        Product product = opt.get();
+        product.setName(productRequest.getName());
+        product.setDescription(productRequest.getDescription());
+        product.setPrice(productRequest.getPrice());
+        productRepository.save(product);
+        return new ProductResponse(
+                product.getId(),
+                product.getName(),
+                product.getDescription(),
+                product.getPrice()
+        );
     }
 
     // ==========================================================
