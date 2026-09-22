@@ -95,6 +95,9 @@ public class ProductService {
     //     sẽ "âm thầm thành công" khi xoá id không tồn tại -> không trả 404.
     // ==========================================================
     public void deleteProduct(String id) {
-        // TODO: viết code tại đây
+        if (!productRepository.existsById(id)) {
+            throw new ProductNotFoundException(id);
+        }
+        productRepository.deleteById(id);
     }
 }
