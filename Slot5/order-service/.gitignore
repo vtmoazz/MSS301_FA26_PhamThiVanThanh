@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local docker MySQL data volume & run logs
+docker/
+app.log
