@@ -100,6 +100,13 @@
 			<version>5.5.0</version>
 			<scope>test</scope>
 		</dependency>
+		<!-- WireMock tich hop chinh thuc cho Spring Boot (Boot 4 khong con @AutoConfigureWireMock) -->
+		<dependency>
+			<groupId>org.wiremock.integrations</groupId>
+			<artifactId>wiremock-spring-boot</artifactId>
+			<version>4.2.3</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<!-- Spring Cloud BOM: nhap bang version cho cac dependency spring-cloud-* -->
