@@ -39,6 +39,19 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- MockMvc cho test routing (Boot 4: AutoConfigureMockMvc nam trong module webmvc-test) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- WireMock dong vai cac service dich trong test -->
+		<dependency>
+			<groupId>org.wiremock.integrations</groupId>
+			<artifactId>wiremock-spring-boot</artifactId>
+			<version>4.2.3</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<!-- Spring Cloud BOM: nhap bang version cho cac dependency spring-cloud-* -->
