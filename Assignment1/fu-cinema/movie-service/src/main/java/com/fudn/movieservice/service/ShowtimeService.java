@@ -60,6 +60,14 @@ public class ShowtimeService {
         }
         LocalDateTime endTime = request.startTime().plusMinutes(movie.getDurationMinutes());
 
+        long overlaps = showtimeRepository
+                .countByRoomIdAndShowtimeStatusAndStartTimeLessThanAndEndTimeGreaterThanAndShowtimeIdNot(
+                        room.getRoomId(), ShowtimeStatus.SCHEDULED, endTime, request.startTime(), excludeId);
+        if (overlaps > 0) {
+            throw ApiException.conflict("Room '" + room.getRoomName() + "' already has a showtime between "
+                    + request.startTime() + " and " + endTime);
+        }
+
         showtime.setMovieId(movie.getMovieId());
         showtime.setRoomId(room.getRoomId());
         showtime.setStartTime(request.startTime());
