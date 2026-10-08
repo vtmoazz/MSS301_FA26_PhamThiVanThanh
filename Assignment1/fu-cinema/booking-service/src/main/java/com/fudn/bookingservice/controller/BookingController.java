@@ -34,4 +34,28 @@ public class BookingController {
                                   @Valid @RequestBody CreateBookingRequest request) {
         return bookingService.create(userId, request);
     }
+
+    @GetMapping("/my")
+    public List<BookingResponse> getMyBookings(@RequestHeader(USER_ID) Long userId) {
+        return bookingService.getMyBookings(userId);
+    }
+
+    @GetMapping
+    public List<BookingResponse> getAll() {
+        return bookingService.getAll();
+    }
+
+    @GetMapping("/{id}")
+    public BookingResponse getById(@PathVariable Long id,
+                                   @RequestHeader(USER_ID) Long userId,
+                                   @RequestHeader(value = USER_ROLE, required = false) String role) {
+        return bookingService.getById(id, userId, role);
+    }
+
+    @PutMapping("/{id}/cancel")
+    public BookingResponse cancel(@PathVariable Long id,
+                                  @RequestHeader(USER_ID) Long userId,
+                                  @RequestHeader(value = USER_ROLE, required = false) String role) {
+        return bookingService.cancel(id, userId, role);
+    }
 }
