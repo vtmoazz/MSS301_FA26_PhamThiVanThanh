@@ -1,0 +1,7 @@
+target/
+.idea/
+*.iml
+.vscode/
+
+# Du lieu runtime cua container (MySQL/MongoDB) - khong commit
+fu-cinema/docker/
