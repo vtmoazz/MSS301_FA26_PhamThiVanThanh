@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.wiremock.spring.ConfigureWireMock;
 import org.wiremock.spring.EnableWireMock;
@@ -23,6 +25,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -32,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Test routing cua API Gateway: khong can Docker hay cac service that.
  * Ca 3 route duoc tro sang cung 1 WireMock server dong vai Product / Order / Inventory.
+ * JWT duoc gia lap bang jwt() nen khong can Keycloak.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -45,6 +49,10 @@ class ApiGatewayRoutingTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // Thay JwtDecoder that (can Keycloak) bang mock
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
 
     @Test
     void healthEndpointShouldBeUp() throws Exception {
@@ -61,7 +69,7 @@ class ApiGatewayRoutingTests {
                         .withHeader("Content-Type", "application/json")
                         .withBody("[{\"id\":\"1\",\"name\":\"iPhone 15\",\"price\":1000}]")));
 
-        mockMvc.perform(get("/api/products"))
+        mockMvc.perform(get("/api/products").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("iPhone 15")));
 
@@ -79,7 +87,7 @@ class ApiGatewayRoutingTests {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"id\":\"abc\",\"name\":\"iPhone 15\"}")));
 
-        mockMvc.perform(post("/api/products").contentType(MediaType.APPLICATION_JSON).content(productJson))
+        mockMvc.perform(post("/api/products").with(jwt()).contentType(MediaType.APPLICATION_JSON).content(productJson))
                 .andExpect(status().isCreated())
                 .andExpect(content().string(containsString("\"id\":\"abc\"")));
 
@@ -91,7 +99,7 @@ class ApiGatewayRoutingTests {
         stubFor(WireMock.put(urlEqualTo("/api/products/abc"))
                 .willReturn(aResponse().withStatus(200).withBody("updated")));
 
-        mockMvc.perform(put("/api/products/abc").contentType(MediaType.APPLICATION_JSON).content("{}"))
+        mockMvc.perform(put("/api/products/abc").with(jwt()).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("updated"));
 
@@ -103,7 +111,7 @@ class ApiGatewayRoutingTests {
         stubFor(WireMock.post(urlEqualTo("/api/order"))
                 .willReturn(aResponse().withStatus(201).withBody("Order Placed Successfully")));
 
-        mockMvc.perform(post("/api/order").contentType(MediaType.APPLICATION_JSON).content(ORDER_JSON))
+        mockMvc.perform(post("/api/order").with(jwt()).contentType(MediaType.APPLICATION_JSON).content(ORDER_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(content().string("Order Placed Successfully"));
 
@@ -117,7 +125,7 @@ class ApiGatewayRoutingTests {
         stubFor(WireMock.post(urlEqualTo("/api/order"))
                 .willReturn(aResponse().withStatus(500)));
 
-        mockMvc.perform(post("/api/order").contentType(MediaType.APPLICATION_JSON).content(ORDER_JSON))
+        mockMvc.perform(post("/api/order").with(jwt()).contentType(MediaType.APPLICATION_JSON).content(ORDER_JSON))
                 .andExpect(status().isInternalServerError());
     }
 
@@ -131,14 +139,14 @@ class ApiGatewayRoutingTests {
                         .withHeader("Content-Type", "application/json")
                         .withBody("true")));
 
-        mockMvc.perform(get("/api/inventory").param("skuCode", "iphone_15").param("quantity", "1"))
+        mockMvc.perform(get("/api/inventory").with(jwt()).param("skuCode", "iphone_15").param("quantity", "1"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));
     }
 
     @Test
     void unknownPathShouldReturn404WithoutCallingServices() throws Exception {
-        mockMvc.perform(get("/api/khong-co-route"))
+        mockMvc.perform(get("/api/khong-co-route").with(jwt()))
                 .andExpect(status().isNotFound());
 
         verify(0, anyRequestedFor(anyUrl()));
