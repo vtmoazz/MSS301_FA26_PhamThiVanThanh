@@ -2,6 +2,7 @@ package com.fudn.bookingservice.controller;
 
 import com.fudn.bookingservice.dto.BookingResponse;
 import com.fudn.bookingservice.dto.CreateBookingRequest;
+import com.fudn.bookingservice.dto.ReportResponse;
 import com.fudn.bookingservice.dto.SeatMapResponse;
 import com.fudn.bookingservice.service.BookingService;
 import jakarta.validation.Valid;
@@ -43,6 +44,13 @@ public class BookingController {
     @GetMapping
     public List<BookingResponse> getAll() {
         return bookingService.getAll();
+    }
+
+    @GetMapping("/report")
+    public ReportResponse report(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return bookingService.report(startDate, endDate);
     }
 
     @GetMapping("/{id}")
