@@ -51,6 +51,26 @@ public class MovieService {
         return MovieResponse.from(movie, genreService.find(movie.getGenreId()).getGenreName());
     }
 
+    public MovieResponse create(MovieRequest request) {
+        Movie movie = new Movie();
+        Genre genre = apply(movie, request);
+        return MovieResponse.from(movieRepository.save(movie), genre.getGenreName());
+    }
+
+    public MovieResponse update(String id, MovieRequest request) {
+        Movie movie = find(id);
+        Genre genre = apply(movie, request);
+        return MovieResponse.from(movieRepository.save(movie), genre.getGenreName());
+    }
+
+    public void delete(String id) {
+        Movie movie = find(id);
+        if (showtimeRepository.existsByMovieId(id)) {
+            throw ApiException.conflict("Cannot delete movie that already has showtimes");
+        }
+        movieRepository.delete(movie);
+    }
+
     public Movie find(String id) {
         return movieRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Movie not found with id: " + id));
@@ -62,5 +82,19 @@ public class MovieService {
         return movies.stream()
                 .map(m -> MovieResponse.from(m, genreNames.get(m.getGenreId())))
                 .toList();
+    }
+
+    private Genre apply(Movie movie, MovieRequest request) {
+        Genre genre = genreService.find(request.genreId());
+        movie.setTitle(request.title());
+        movie.setDescription(request.description());
+        movie.setDirector(request.director());
+        movie.setDurationMinutes(request.durationMinutes());
+        movie.setLanguage(request.language());
+        movie.setAgeRating(request.ageRating());
+        movie.setReleaseDate(request.releaseDate());
+        movie.setGenreId(genre.getGenreId());
+        movie.setMovieStatus(request.movieStatus());
+        return genre;
     }
 }
