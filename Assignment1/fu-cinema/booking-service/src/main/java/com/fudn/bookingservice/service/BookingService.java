@@ -96,6 +96,10 @@ public class BookingService {
                 .stream().map(BookingResponse::from).toList();
     }
 
+    public BookingResponse getById(Long bookingId, Long userId, String role) {
+        return BookingResponse.from(findAccessible(bookingId, userId, role));
+    }
+
     private ShowtimeResponse fetchShowtime(String showtimeId) {
         try {
             return movieClient.getShowtime(showtimeId);
@@ -124,5 +128,14 @@ public class BookingService {
             throw ApiException.badRequest("Seat " + seat + " does not exist in room " + st.roomName()
                     + " (rows A-" + lastRow + ", seats 1-" + st.seatsPerRow() + ")");
         }
+    }
+
+    private Booking findAccessible(Long bookingId, Long userId, String role) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> ApiException.notFound("Booking not found with id: " + bookingId));
+        if (!ROLE_ADMIN.equals(role) && !booking.getCustomerId().equals(userId)) {
+            throw ApiException.forbidden("You can only access your own bookings");
+        }
+        return booking;
     }
 }
