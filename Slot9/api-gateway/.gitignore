@@ -33,5 +33,9 @@ build/
 .vscode/
 
 # Local docker MySQL data volume & run logs
-docker/
+docker/*
+!docker/keycloak/
 app.log
+
+### Keycloak MySQL data ###
+volume-data/
