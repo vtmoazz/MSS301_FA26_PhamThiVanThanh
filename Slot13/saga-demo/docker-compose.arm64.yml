@@ -1,0 +1,32 @@
+# Override cho máy Apple Silicon (arm64).
+# Image SQL Server 2022 chỉ có bản amd64; chạy qua giả lập sẽ bị lỗi segmentation fault.
+# Azure SQL Edge dùng cùng engine SQL Server và có bản arm64, nên payment-service kết nối JDBC y hệt.
+# Azure SQL Edge không kèm sqlcmd, nên database paymentdb được tạo bởi container db-init.
+# Cách dùng: docker compose -f docker-compose.yml -f docker-compose.arm64.yml up -d --build
+services:
+  sqlserver:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/1433' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  db-init:
+    image: mcr.microsoft.com/mssql-tools:latest
+    platform: linux/amd64
+    container_name: saga-db-init
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        for i in $$(seq 1 30); do
+          /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P 'Saga@12345' -l 5 \
+            -Q "IF DB_ID('paymentdb') IS NULL CREATE DATABASE paymentdb" && exit 0
+          echo "SQL engine chưa sẵn sàng, thử lại lần $$i"; sleep 3
+        done
+        exit 1
+    depends_on:
+      sqlserver:
+        condition: service_healthy
