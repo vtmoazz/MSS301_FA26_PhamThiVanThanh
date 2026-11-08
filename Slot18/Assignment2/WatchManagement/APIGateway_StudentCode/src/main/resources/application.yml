@@ -1,4 +1,4 @@
-# [TODO-7.1, TODO-7.2, TODO-7.6: routes, CircuitBreaker, TimeLimiter 15s]
+# [TODO-7.1 – TODO-7.6: routes, CircuitBreaker, TimeLimiter 15s, JWT]
 server:
   port: 8080
 
@@ -39,6 +39,9 @@ spring:
                   args:
                     name: watchCB
                     fallbackUri: forward:/fallback/watch
+
+jwt:
+  secret: ${JWT_SECRET:mss301-watch-management-secret-key-2025-very-long-string}
 
 resilience4j:
   circuitbreaker:
