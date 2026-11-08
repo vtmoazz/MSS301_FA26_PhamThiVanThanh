@@ -1,0 +1,29 @@
+# Override cho máy Apple Silicon (arm64).
+# Image SQL Server 2022 chỉ có bản amd64; chạy qua giả lập qemu sẽ bị lỗi segmentation fault.
+# Azure SQL Edge dùng cùng engine SQL Server và có bản arm64, nên các service kết nối JDBC y hệt.
+# Cách dùng: docker compose -f docker-compose.yml -f docker-compose.arm64.yml up -d --build
+services:
+  sqlserver:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    healthcheck:
+      # Azure SQL Edge không kèm sqlcmd, nên chỉ kiểm tra cổng 1433 đã mở.
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/1433' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  db-init:
+    image: mcr.microsoft.com/mssql-tools:latest
+    platform: linux/amd64
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        for i in $$(seq 1 30); do
+          /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P "$$DB_PASSWORD" -l 5 -Q "
+          IF DB_ID('DBAccount') IS NULL CREATE DATABASE DBAccount;
+          IF DB_ID('DBBrand')   IS NULL CREATE DATABASE DBBrand;
+          IF DB_ID('DBWatch')   IS NULL CREATE DATABASE DBWatch;" && exit 0
+          echo "SQL engine not ready yet, retry $$i"; sleep 3
+        done
+        exit 1
