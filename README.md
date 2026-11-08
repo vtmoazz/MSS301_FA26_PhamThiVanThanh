@@ -17,6 +17,7 @@
 |------|----------|-------|
 | [`Slot4`](./Slot4/product-service) | Product Service | REST API CRUD sản phẩm với Spring Boot + MongoDB |
 | [`Slot9`](./Slot9) | Microservices Part 1 → 5 | Product / Order / Inventory + API Gateway (Keycloak JWT) + Swagger (Springdoc OpenAPI) |
+| [`Slot16`](./Slot16/PE_Sample) | PE Sample — Sponsored Post | User / Post (OpenFeign) / Media Gateway + SQL Server, Swagger gom qua gateway, Docker Compose |
 | [`Slot18`](./Slot18/Assignment2/WatchManagement) | Assignment 2 — Watch Management | 4 microservice + SQL Server, Saga Orchestration với bù trừ LIFO, JWT qua API Gateway, Docker Compose |
 
 ## 🚀 Slot4 — Product Service
@@ -79,6 +80,29 @@ cd Slot9/api-gateway && docker compose up -d       # Keycloak :8181
 | `http://localhost:8080/swagger-ui.html` · `:8081` · `:8082` | Swagger UI của từng service |
 | `http://localhost:{port}/api-docs` | OpenAPI JSON của từng service |
 | `http://localhost:9000/api/products` không có JWT | `401 Unauthorized` |
+
+## 🚀 Slot16 — PE Sample: Sponsored Post Booking
+
+Bài làm trên lớp theo đề PE mẫu: nền tảng đặt bài đăng tài trợ, gồm 3 ứng dụng Spring Boot 4.1.0 (JDK 21, Spring Cloud 2025.1.2, springdoc 3.0.3).
+
+| Project | Cổng | Mô tả |
+|---------|------|-------|
+| `SE192641UserService` | 8081 | CRUD creator, phân trang, lọc role/status, xoá mềm (DEACTIVATED) |
+| `SE192641PostService` | 8082 | CRUD chiến dịch, gọi User Service qua OpenFeign, tự tính `totalCost = ratePerPost × số ngày` |
+| `SE192641MediaGateway` | 8080 | Spring Cloud Gateway (WebFlux): định tuyến `/api/users/**`, `/api/posts/**`, CORS, gom Swagger |
+
+Mã trạng thái: `1` = 200/201 · `2` = 406 · `3` = 226 · `4` = 404 · `5` = 400 (user không ACTIVE) · `0` = 500.
+
+Chạy cả hệ thống (SQL Server + 3 service) bằng Docker:
+
+```bash
+cd Slot16/PE_Sample
+export DB_PASSWORD='<mật khẩu đủ mạnh>'
+docker compose up -d --build
+# Apple Silicon: docker compose -f docker-compose.yml -f docker-compose.arm64.yml up -d --build
+```
+
+Swagger: `http://localhost:8080/swagger-ui.html`. Báo cáo: [`Slot16_Report.docx`](./Slot16/Slot16_Report.docx).
 
 ## 🚀 Slot18 — Assignment 2: Watch Management (Saga Pattern)
 
