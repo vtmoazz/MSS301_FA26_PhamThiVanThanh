@@ -1,0 +1,20 @@
+package com.mss301.account.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+// [TODO-3.4: DTO token trả về sau khi đăng nhập / refresh]
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class LoginResponse {
+
+    private String accessToken;
+    private String refreshToken;
+    private String tokenType;
+    private Integer role;
+    private String username;
+}
