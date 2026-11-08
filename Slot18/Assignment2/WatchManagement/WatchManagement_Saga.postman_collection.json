@@ -1,0 +1,1965 @@
+{
+  "info": {
+    "name": "WatchManagement Saga",
+    "description": "Assignment 2 (MSS301) - Phạm Thị Vân Thanh, SE192641. Run the folders in order against the API Gateway; each folder proves one saga path (completion or compensation).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Services run in UTC inside Docker, so 'today' must be the UTC date.",
+          "pm.collectionVariables.set('today', new Date().toISOString().slice(0, 10));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "today",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "adminTokenRefresh",
+      "value": ""
+    },
+    {
+      "key": "staffToken",
+      "value": ""
+    },
+    {
+      "key": "staffTokenRefresh",
+      "value": ""
+    },
+    {
+      "key": "memberToken",
+      "value": ""
+    },
+    {
+      "key": "memberTokenRefresh",
+      "value": ""
+    },
+    {
+      "key": "newWatchId",
+      "value": ""
+    },
+    {
+      "key": "ghostWatchId",
+      "value": ""
+    },
+    {
+      "key": "sagaId",
+      "value": ""
+    },
+    {
+      "key": "countBefore",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Login",
+      "description": "Log in the three active roles and store their tokens.",
+      "item": [
+        {
+          "name": "Login adminsys",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"adminsys\",\n  \"password\": \"@1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set(\"adminToken\", d.accessToken);",
+                  "pm.collectionVariables.set(\"adminTokenRefresh\", d.refreshToken);",
+                  "pm.test(\"Returns access and refresh tokens\", () => { pm.expect(d.accessToken).to.be.a(\"string\"); pm.expect(d.refreshToken).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login staff02",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"staff02\",\n  \"password\": \"@1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set(\"staffToken\", d.accessToken);",
+                  "pm.collectionVariables.set(\"staffTokenRefresh\", d.refreshToken);",
+                  "pm.test(\"Returns access and refresh tokens\", () => { pm.expect(d.accessToken).to.be.a(\"string\"); pm.expect(d.refreshToken).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login member01",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"member01\",\n  \"password\": \"@1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set(\"memberToken\", d.accessToken);",
+                  "pm.collectionVariables.set(\"memberTokenRefresh\", d.refreshToken);",
+                  "pm.test(\"Returns access and refresh tokens\", () => { pm.expect(d.accessToken).to.be.a(\"string\"); pm.expect(d.refreshToken).to.be.a(\"string\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List watches (public, newest first)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const list = pm.response.json().data;",
+                  "pm.test(\"Sorted by WatchID descending\", () => { for (let i = 1; i < list.length; i++) pm.expect(list[i-1].watchId).to.be.above(list[i].watchId); });",
+                  "pm.test(\"Each watch carries its category name\", () => pm.expect(list[0].categoryName).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 Security",
+      "description": "Gateway checks: missing token, wrong role, inactive account, refresh and spoofed headers.",
+      "item": [
+        {
+          "name": "Create without token -> 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Member creates -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff creates -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{staffToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inactive member02 login -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"member02\",\n  \"password\": \"@1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wrong password -> 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"adminsys\",\n  \"password\": \"wrong\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh access token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{adminTokenRefresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"adminToken\", pm.response.json().data.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh token used as access token -> 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminTokenRefresh}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sagas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sagas"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Member spoofs X-User-Role: 1 -> 403",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              },
+              {
+                "key": "X-User-Role",
+                "value": "1"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "1"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches",
+                "1"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Validation before saga",
+      "description": "Cheap checks fail with 400 before any saga step runs, so nothing needs compensation.",
+      "item": [
+        {
+          "name": "Name 10 chars or less -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Short Name\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Price below 100 -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 99,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Release date not today -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"2020-01-01\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unknown category -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300\",\n  \"categoryId\": 99,\n  \"brandId\": 1,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Create saga completes",
+      "description": "CREATE_WATCH then ASSIGN_BRAND both commit; both databases agree.",
+      "item": [
+        {
+          "name": "Create watch (brand 1) -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300\",\n  \"categoryId\": 1,\n  \"brandId\": 1,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"X-Saga-Id header present\", () => pm.expect(pm.response.headers.get(\"X-Saga-Id\")).to.be.a(\"string\"));",
+                  "pm.collectionVariables.set(\"sagaId\", pm.response.headers.get(\"X-Saga-Id\") || (pm.response.json().data || {}).sagaId);",
+                  "pm.collectionVariables.set(\"newWatchId\", pm.response.json().data.watchId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "New watch is first in list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"First item is the new watch\", () => pm.expect(pm.response.json().data[0].watchId).to.eql(Number(pm.collectionVariables.get(\"newWatchId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Brand 1 now lists the new watch",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brands/1/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "brands",
+                "1",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().data.watchIds;",
+                  "pm.test(\"Brand 1 contains watch \" + pm.collectionVariables.get(\"newWatchId\"), () =>",
+                  "    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"newWatchId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Saga detail -> COMPLETED",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sagas/{{sagaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sagas",
+                "{{sagaId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data;",
+                  "pm.test(\"Saga status is COMPLETED\", () => pm.expect(s.status).to.eql(\"COMPLETED\"));",
+                  "const comp = s.steps.filter(x => x.phase === \"COMPENSATE\" && x.result === \"SUCCESS\").map(x => x.stepName);",
+                  "pm.test(\"Compensations (reverse order): none\", () => pm.expect(comp).to.eql([]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Create with unknown brand -> compensated",
+      "description": "Step 2 fails (brand 999 does not exist in MSBrand), so step 1 is undone with DELETE_WATCH.",
+      "item": [
+        {
+          "name": "Count watches before",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"countBefore\", pm.response.json().data.length);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create with brand 999 -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300\",\n  \"categoryId\": 1,\n  \"brandId\": 999,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Saga ended COMPENSATED\", () => pm.expect(pm.response.json().data.sagaStatus).to.eql(\"COMPENSATED\"));",
+                  "pm.collectionVariables.set(\"sagaId\", pm.response.headers.get(\"X-Saga-Id\") || (pm.response.json().data || {}).sagaId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Saga detail shows DELETE_WATCH",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sagas/{{sagaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sagas",
+                "{{sagaId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data;",
+                  "pm.test(\"Saga status is COMPENSATED\", () => pm.expect(s.status).to.eql(\"COMPENSATED\"));",
+                  "const comp = s.steps.filter(x => x.phase === \"COMPENSATE\" && x.result === \"SUCCESS\").map(x => x.stepName);",
+                  "pm.test(\"Compensations (reverse order): DELETE_WATCH\", () => pm.expect(comp).to.eql([\"DELETE_WATCH\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Watch count unchanged",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Watch count unchanged (no orphan row left in DBWatch)\", () => pm.expect(pm.response.json().data.length).to.eql(Number(pm.collectionVariables.get(\"countBefore\"))));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Create fails after step 2 -> LIFO compensation",
+      "description": "Both steps commit, then a simulated fault forces compensation in reverse order.",
+      "item": [
+        {
+          "name": "Count watches before",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"countBefore\", pm.response.json().data.length);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create with X-Saga-Fail-After-Step: 2 -> 500",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-Saga-Fail-After-Step",
+                "value": "2"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Seamaster Aqua Terra 150M\",\n  \"categoryId\": 1,\n  \"brandId\": 2,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 500\", () => pm.response.to.have.status(500));",
+                  "pm.test(\"Saga ended COMPENSATED\", () => pm.expect(pm.response.json().data.sagaStatus).to.eql(\"COMPENSATED\"));",
+                  "pm.collectionVariables.set(\"sagaId\", pm.response.headers.get(\"X-Saga-Id\") || (pm.response.json().data || {}).sagaId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Saga detail: UNASSIGN_BRAND then DELETE_WATCH",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sagas/{{sagaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sagas",
+                "{{sagaId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data;",
+                  "pm.test(\"Saga status is COMPENSATED\", () => pm.expect(s.status).to.eql(\"COMPENSATED\"));",
+                  "const comp = s.steps.filter(x => x.phase === \"COMPENSATE\" && x.result === \"SUCCESS\").map(x => x.stepName);",
+                  "pm.test(\"Compensations (reverse order): UNASSIGN_BRAND then DELETE_WATCH\", () => pm.expect(comp).to.eql([\"UNASSIGN_BRAND\", \"DELETE_WATCH\"]));",
+                  "",
+                  "pm.collectionVariables.set(\"ghostWatchId\", s.watchId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Watch count unchanged",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Watch count unchanged (no orphan row left in DBWatch)\", () => pm.expect(pm.response.json().data.length).to.eql(Number(pm.collectionVariables.get(\"countBefore\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Brand 2 has no link to the removed watch",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brands/2/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "brands",
+                "2",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().data.watchIds;",
+                  "pm.test(\"Brand 2 does not contain watch \" + pm.collectionVariables.get(\"ghostWatchId\"), () =>",
+                  "    pm.expect(ids).not.to.include(Number(pm.collectionVariables.get(\"ghostWatchId\"))));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 Update saga",
+      "description": "UPDATE_WATCH then ASSIGN_BRAND; on failure RESTORE_WATCH and ASSIGN_BRAND_BACK use the saved snapshot.",
+      "item": [
+        {
+          "name": "Move new watch to brand 2 -> 200",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches/{{newWatchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches",
+                "{{newWatchId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300 GMT\",\n  \"categoryId\": 1,\n  \"brandId\": 2,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));pm.collectionVariables.set(\"sagaId\", pm.response.headers.get(\"X-Saga-Id\") || (pm.response.json().data || {}).sagaId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Brand 2 now lists it",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brands/2/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "brands",
+                "2",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().data.watchIds;",
+                  "pm.test(\"Brand 2 contains watch \" + pm.collectionVariables.get(\"newWatchId\"), () =>",
+                  "    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"newWatchId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Brand 1 no longer lists it",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brands/1/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "brands",
+                "1",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().data.watchIds;",
+                  "pm.test(\"Brand 1 does not contain watch \" + pm.collectionVariables.get(\"newWatchId\"), () =>",
+                  "    pm.expect(ids).not.to.include(Number(pm.collectionVariables.get(\"newWatchId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update to brand 3, fail after step 2 -> 500",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-Saga-Fail-After-Step",
+                "value": "2"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches/{{newWatchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches",
+                "{{newWatchId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Should Be Rolled Back Name\",\n  \"categoryId\": 1,\n  \"brandId\": 3,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 9999,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 500\", () => pm.response.to.have.status(500));pm.collectionVariables.set(\"sagaId\", pm.response.headers.get(\"X-Saga-Id\") || (pm.response.json().data || {}).sagaId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Saga detail: ASSIGN_BRAND_BACK then RESTORE_WATCH",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sagas/{{sagaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sagas",
+                "{{sagaId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data;",
+                  "pm.test(\"Saga status is COMPENSATED\", () => pm.expect(s.status).to.eql(\"COMPENSATED\"));",
+                  "const comp = s.steps.filter(x => x.phase === \"COMPENSATE\" && x.result === \"SUCCESS\").map(x => x.stepName);",
+                  "pm.test(\"Compensations (reverse order): ASSIGN_BRAND_BACK then RESTORE_WATCH\", () => pm.expect(comp).to.eql([\"ASSIGN_BRAND_BACK\", \"RESTORE_WATCH\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Watch restored to previous values",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const w = pm.response.json().data.find(x => x.watchId === Number(pm.collectionVariables.get(\"newWatchId\")));",
+                  "pm.test(\"Name restored\", () => pm.expect(w.name).to.eql(\"Aquaracer Professional 300 GMT\"));",
+                  "pm.test(\"Brand restored to 2\", () => pm.expect(w.brandId).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Brand 2 still lists it",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brands/2/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "brands",
+                "2",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().data.watchIds;",
+                  "pm.test(\"Brand 2 contains watch \" + pm.collectionVariables.get(\"newWatchId\"), () =>",
+                  "    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"newWatchId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update unknown brand 999 -> 400 compensated",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches/{{newWatchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches",
+                "{{newWatchId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Aquaracer Professional 300\",\n  \"categoryId\": 1,\n  \"brandId\": 999,\n  \"caseMaterial\": \"Stainless Steel\",\n  \"strapMaterial\": \"Rubber\",\n  \"waterpMaterial\": \"300 meters\",\n  \"price\": 2950,\n  \"releaseDate\": \"{{today}}\",\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Saga ended COMPENSATED\", () => pm.expect(pm.response.json().data.sagaStatus).to.eql(\"COMPENSATED\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 Delete saga",
+      "description": "UNASSIGN_BRAND then DELETE_WATCH (pivot). Before the pivot the saga can roll back; after it, it must finish.",
+      "item": [
+        {
+          "name": "Delete, fail after step 1 -> 500",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-Saga-Fail-After-Step",
+                "value": "1"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches/{{newWatchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches",
+                "{{newWatchId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 500\", () => pm.response.to.have.status(500));pm.collectionVariables.set(\"sagaId\", pm.response.headers.get(\"X-Saga-Id\") || (pm.response.json().data || {}).sagaId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Saga detail: ASSIGN_BRAND_BACK",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sagas/{{sagaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sagas",
+                "{{sagaId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data;",
+                  "pm.test(\"Saga status is COMPENSATED\", () => pm.expect(s.status).to.eql(\"COMPENSATED\"));",
+                  "const comp = s.steps.filter(x => x.phase === \"COMPENSATE\" && x.result === \"SUCCESS\").map(x => x.stepName);",
+                  "pm.test(\"Compensations (reverse order): ASSIGN_BRAND_BACK\", () => pm.expect(comp).to.eql([\"ASSIGN_BRAND_BACK\"]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Watch still exists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Watch still in DBWatch\", () => pm.expect(pm.response.json().data.map(x => x.watchId)).to.include(Number(pm.collectionVariables.get(\"newWatchId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Brand 2 relinked",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brands/2/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "brands",
+                "2",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().data.watchIds;",
+                  "pm.test(\"Brand 2 contains watch \" + pm.collectionVariables.get(\"newWatchId\"), () =>",
+                  "    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"newWatchId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete, fault after pivot is ignored -> 200",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "X-Saga-Fail-After-Step",
+                "value": "2"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/watches/{{newWatchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "watches",
+                "{{newWatchId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));pm.collectionVariables.set(\"sagaId\", pm.response.headers.get(\"X-Saga-Id\") || (pm.response.json().data || {}).sagaId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Saga detail: COMPLETED, fault SKIPPED",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sagas/{{sagaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sagas",
+                "{{sagaId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data;",
+                  "pm.test(\"Saga status is COMPLETED\", () => pm.expect(s.status).to.eql(\"COMPLETED\"));",
+                  "const comp = s.steps.filter(x => x.phase === \"COMPENSATE\" && x.result === \"SUCCESS\").map(x => x.stepName);",
+                  "pm.test(\"Compensations (reverse order): none\", () => pm.expect(comp).to.eql([]));",
+                  "",
+                  "pm.test(\"Fault after pivot was skipped\", () => pm.expect(s.steps.some(x => x.phase === \"FAULT\" && x.result === \"SKIPPED\")).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Brand 2 no longer lists it",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brands/2/watches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "brands",
+                "2",
+                "watches"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().data.watchIds;",
+                  "pm.test(\"Brand 2 does not contain watch \" + pm.collectionVariables.get(\"newWatchId\"), () =>",
+                  "    pm.expect(ids).not.to.include(Number(pm.collectionVariables.get(\"newWatchId\"))));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 Saga monitoring (admin only)",
+      "description": "Saga history is only visible to the administrator.",
+      "item": [
+        {
+          "name": "Admin lists recent sagas -> 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sagas?limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sagas"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Has saga entries\", () => pm.expect(pm.response.json().data.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Member lists sagas -> 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{memberToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sagas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sagas"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
