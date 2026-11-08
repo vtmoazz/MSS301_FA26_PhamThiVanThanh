@@ -1,0 +1,75 @@
+# Chạy cả hệ thống: SQL Server + User Service + Post Service + Gateway.
+# Mật khẩu SA lấy từ biến môi trường DB_PASSWORD của shell (không lưu trong repo):
+#   export DB_PASSWORD='<mật khẩu đủ mạnh>'
+#   docker compose up -d --build
+# application.properties giữ đúng giá trị của đề (localhost, sa/sa); ở đây chỉ ghi đè cho môi trường Docker.
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD first}"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mediadata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  # Tạo database MSS301_2026_PE_MEDIA, hai bảng của đề và dữ liệu mẫu
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      DB_PASSWORD: "${DB_PASSWORD}"
+    volumes:
+      - ./database:/db:ro
+    entrypoint: ["/bin/bash", "/db/init-db.sh"]
+    restart: "no"
+
+  user-service:
+    build: ./SE192641UserService
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:sqlserver://sqlserver:1433;databaseName=MSS301_2026_PE_MEDIA;encrypt=false;"
+      SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD}"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+
+  post-service:
+    build: ./SE192641PostService
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:sqlserver://sqlserver:1433;databaseName=MSS301_2026_PE_MEDIA;encrypt=false;"
+      SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD}"
+      USER_SERVICE_URL: "http://user-service:8081"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      user-service:
+        condition: service_started
+
+  media-gateway:
+    build: ./SE192641MediaGateway
+    ports:
+      - "8080:8080"
+    environment:
+      # Ghi đè trọn danh sách route để trỏ tới tên service trong mạng Docker
+      SPRING_APPLICATION_JSON: >-
+        {"spring.cloud.gateway.server.webflux.routes":[
+        {"id":"user-service","uri":"http://user-service:8081","predicates":["Path=/api/users/**"]},
+        {"id":"post-service","uri":"http://post-service:8082","predicates":["Path=/api/posts/**"]}]}
+    depends_on:
+      - user-service
+      - post-service
+
+volumes:
+  mediadata:

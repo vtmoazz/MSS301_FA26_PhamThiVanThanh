@@ -1,0 +1,17 @@
+# Override cho máy Apple Silicon (arm64): SQL Server 2022 chỉ có bản amd64.
+# Azure SQL Edge cùng engine, có bản arm64; db-init dùng image mssql-tools (sqlcmd cũ, không có cờ -C).
+# Cách dùng: docker compose -f docker-compose.yml -f docker-compose.arm64.yml up -d --build
+services:
+  sqlserver:
+    image: mcr.microsoft.com/azure-sql-edge:latest
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/1433' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  db-init:
+    image: mcr.microsoft.com/mssql-tools:latest
+    platform: linux/amd64
+    environment:
+      SQLCMD: /opt/mssql-tools/bin/sqlcmd
