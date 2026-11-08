@@ -17,6 +17,8 @@
 |------|----------|-------|
 | [`Slot4`](./Slot4/product-service) | Product Service | REST API CRUD sản phẩm với Spring Boot + MongoDB |
 | [`Slot9`](./Slot9) | Microservices Part 1 → 5 | Product / Order / Inventory + API Gateway (Keycloak JWT) + Swagger (Springdoc OpenAPI) |
+| [`Slot13`](./Slot13/saga-demo) | Saga Pattern — Order Saga | Order / Inventory / Payment trên MySQL, MongoDB, SQL Server; Saga Orchestrator bù trừ LIFO + retry, Postman KB1–KB8 |
+| [`Slot14`](./Slot14) | Test Saga — 2 kịch bản | Báo cáo Word: KB2 thanh toán thất bại (402) và KB6 tắt payment-service, kèm kết quả Postman, saga logs, log service |
 | [`Slot16`](./Slot16/PE_Sample) | PE Sample — Sponsored Post | User / Post (OpenFeign) / Media Gateway + SQL Server, Swagger gom qua gateway, Docker Compose |
 | [`Slot18`](./Slot18/Assignment2/WatchManagement) | Assignment 2 — Watch Management | 4 microservice + SQL Server, Saga Orchestration với bù trừ LIFO, JWT qua API Gateway, Docker Compose |
 
@@ -80,6 +82,35 @@ cd Slot9/api-gateway && docker compose up -d       # Keycloak :8181
 | `http://localhost:8080/swagger-ui.html` · `:8081` · `:8082` | Swagger UI của từng service |
 | `http://localhost:{port}/api-docs` | OpenAPI JSON của từng service |
 | `http://localhost:9000/api/products` không có JWT | `401 Unauthorized` |
+
+## 🚀 Slot13 — Saga Pattern: Order Saga (Orchestration)
+
+Đặt hàng qua 3 service, mỗi service một database. `order-service` điều phối: tạo order → giữ hàng → thanh toán → xác nhận; lỗi ở bước nào thì bù trừ ngược các bước đã xong và huỷ order.
+
+| Service | Cổng | Database | Bước / bù trừ |
+|---|---|---|---|
+| `order-service` | 8081 | MySQL `orderdb` | tạo order, xác nhận / huỷ order, lưu `saga_logs` |
+| `inventory-service` | 8082 | MongoDB `inventorydb` | `reserve` / `release` |
+| `payment-service` | 8083 | SQL Server `paymentdb` | `pay` / `refund` |
+
+```bash
+cd Slot13/saga-demo
+docker compose up -d --build
+# Apple Silicon: docker compose -f docker-compose.yml -f docker-compose.arm64.yml up -d --build
+```
+
+Postman: [`Saga_Postman_Collection.json`](./Slot13/saga-demo/Saga_Postman_Collection.json). Chi tiết: [`Slot13/saga-demo/README.md`](./Slot13/saga-demo/README.md).
+
+## 🚀 Slot14 — Kiểm thử Saga: 2 kịch bản
+
+Báo cáo [`Slot14_Saga_Test_Report.docx`](./Slot14/Slot14_Saga_Test_Report.docx) chạy trên demo Slot13:
+
+| Kịch bản | Kết quả |
+|---|---|
+| KB2 — ví không đủ tiền (402) | Order `CANCELLED` / `COMPENSATED`, hàng đã giữ được trả lại, số dư không đổi |
+| KB6 — tắt `payment-service` | Connect timeout sau 2s, Saga bù trừ trả hàng, order `CANCELLED` / `COMPENSATED` |
+
+Postman Runner (newman): 43 request, 79 assertion, 0 lỗi.
 
 ## 🚀 Slot16 — PE Sample: Sponsored Post Booking
 
