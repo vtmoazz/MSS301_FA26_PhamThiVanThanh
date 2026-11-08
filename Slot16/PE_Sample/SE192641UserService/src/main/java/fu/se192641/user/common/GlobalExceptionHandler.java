@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -55,6 +56,13 @@ public class GlobalExceptionHandler {
         }
         log.error("Data integrity error", ex);
         return validation("Data violates a database constraint");
+    }
+
+    /** Đường dẫn không tồn tại: trả 404 thay vì rơi xuống lỗi 500 chung. */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse> handleNoResource(NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(4, "Resource not found: /" + ex.getResourcePath()));
     }
 
     @ExceptionHandler(Exception.class)
