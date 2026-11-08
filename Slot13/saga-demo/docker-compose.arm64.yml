@@ -30,3 +30,8 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
+
+  payment-service:
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
